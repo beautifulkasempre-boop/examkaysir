@@ -14,6 +14,10 @@ const cartItems = document.getElementById('cart-items');
 const cartTotal = document.getElementById('cart-total');
 const cartCount = document.getElementById('cart-count');
 const checkoutBtn = document.querySelector('.checkout-btn');
+const checkoutModal = document.getElementById('checkout-modal');
+const closeCheckoutBtn = document.querySelector('.close-checkout');
+const cancelCheckoutBtn = document.getElementById('cancel-checkout');
+const checkoutForm = document.getElementById('checkout-form');
 
 // Products Data
 const products = [
@@ -301,22 +305,124 @@ const showNotification = (message) => {
     }, 3000);
 };
 
-// Checkout
-const checkout = () => {
+// Show checkout modal
+const showCheckoutModal = () => {
     if (cart.length === 0) {
         showNotification('Your cart is empty');
         return;
     }
     
-    // In a real application, you would redirect to a checkout page
-    // or show a payment form here
-    alert('Proceeding to checkout!');
+    // Populate order summary
+    updateCheckoutSummary();
     
-    // For demo purposes, we'll just clear the cart
+    // Show modal
+    checkoutModal.classList.add('active');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+};
+
+// Close checkout modal
+const closeCheckoutModal = () => {
+    checkoutModal.classList.remove('active');
+    overlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
+    checkoutForm.reset();
+};
+
+// Update checkout summary
+const updateCheckoutSummary = () => {
+    const checkoutSummary = document.getElementById('checkout-summary');
+    const checkoutTotal = document.getElementById('checkout-total');
+    
+    checkoutSummary.innerHTML = cart.map(item => `
+        <div class="summary-item">
+            <div class="summary-item-info">
+                <span class="summary-item-name">${item.name}</span>
+                <span class="summary-item-qty">Qty: ${item.quantity}</span>
+            </div>
+            <span class="summary-item-price">${formatPrice(item.price * item.quantity)}</span>
+        </div>
+    `).join('');
+    
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    checkoutTotal.textContent = formatPrice(total);
+};
+
+// Validate checkout form
+const validateCheckoutForm = () => {
+    const name = document.getElementById('checkout-name').value.trim();
+    const email = document.getElementById('checkout-email').value.trim();
+    const phone = document.getElementById('checkout-phone').value.trim();
+    const address = document.getElementById('checkout-address').value.trim();
+    const city = document.getElementById('checkout-city').value.trim();
+    const province = document.getElementById('checkout-province').value.trim();
+    const zip = document.getElementById('checkout-zip').value.trim();
+    const payment = document.getElementById('checkout-payment').value;
+    
+    if (!name || !email || !phone || !address || !city || !province || !zip || !payment) {
+        showNotification('Please fill in all required fields');
+        return false;
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Please enter a valid email address');
+        return false;
+    }
+    
+    // Validate phone format (Philippines)
+    const phoneRegex = /^(09|\+639)\d{9}$/;
+    const cleanPhone = phone.replace(/\s|-/g, '');
+    if (!phoneRegex.test(cleanPhone)) {
+        showNotification('Please enter a valid Philippine phone number (09XX XXX XXXX)');
+        return false;
+    }
+    
+    return true;
+};
+
+// Process checkout
+const processCheckout = (e) => {
+    e.preventDefault();
+    
+    if (!validateCheckoutForm()) {
+        return;
+    }
+    
+    // Get form data
+    const formData = {
+        name: document.getElementById('checkout-name').value.trim(),
+        email: document.getElementById('checkout-email').value.trim(),
+        phone: document.getElementById('checkout-phone').value.trim(),
+        address: document.getElementById('checkout-address').value.trim(),
+        city: document.getElementById('checkout-city').value.trim(),
+        province: document.getElementById('checkout-province').value.trim(),
+        zip: document.getElementById('checkout-zip').value.trim(),
+        payment: document.getElementById('checkout-payment').value,
+        items: cart,
+        total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        date: new Date().toISOString()
+    };
+    
+    // In a real application, you would send this data to a server
+    console.log('Order Details:', formData);
+    
+    // Show success message
+    showNotification('Order placed successfully! We will contact you soon.');
+    
+    // Clear cart
     cart = [];
     updateCart();
+    
+    // Close modals
+    closeCheckoutModal();
     closeCart();
-    showNotification('Order placed successfully!');
+};
+
+// Checkout (original function - now shows modal)
+const checkout = () => {
+    showCheckoutModal();
 };
 
 // Handle cart visibility
@@ -384,13 +490,37 @@ closeCartBtn.addEventListener('click', closeCart);
 // Checkout button
 checkoutBtn.addEventListener('click', checkout);
 
+// Close checkout modal buttons
+if (closeCheckoutBtn) {
+    closeCheckoutBtn.addEventListener('click', closeCheckoutModal);
+}
+
+if (cancelCheckoutBtn) {
+    cancelCheckoutBtn.addEventListener('click', closeCheckoutModal);
+}
+
+// Checkout form submission
+if (checkoutForm) {
+    checkoutForm.addEventListener('submit', processCheckout);
+}
+
 // Overlay click
-overlay.addEventListener('click', closeCart);
+overlay.addEventListener('click', () => {
+    if (checkoutModal && checkoutModal.classList.contains('active')) {
+        closeCheckoutModal();
+    } else if (cartSidebar.classList.contains('active')) {
+        closeCart();
+    }
+});
 
 // Close cart with ESC
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && cartSidebar.classList.contains('active')) {
-        closeCart();
+    if (e.key === 'Escape') {
+        if (checkoutModal && checkoutModal.classList.contains('active')) {
+            closeCheckoutModal();
+        } else if (cartSidebar.classList.contains('active')) {
+            closeCart();
+        }
     }
 });
 
