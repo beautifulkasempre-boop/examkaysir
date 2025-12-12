@@ -204,7 +204,7 @@ const displayProducts = (filteredProducts = products) => {
 };
 
 // Filter products based on category and search
-const applyFilters = () => {
+const applyFilters = (shouldScroll = false) => {
     const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const dropdownCategory = searchFilter ? searchFilter.value : 'all';
     const categoryToUse = dropdownCategory !== 'all' ? dropdownCategory : activeCategory;
@@ -216,6 +216,19 @@ const applyFilters = () => {
     });
 
     displayProducts(filteredProducts);
+    
+    // Scroll to products section if search was performed
+    if (shouldScroll && (term || dropdownCategory !== 'all')) {
+        const productsSection = document.getElementById('products');
+        if (productsSection) {
+            setTimeout(() => {
+                productsSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }, 100);
+        }
+    }
 };
 
 // Add to cart
@@ -527,20 +540,29 @@ document.addEventListener('keydown', (e) => {
 
 // Search input/filter
 if (searchInput) {
-    searchInput.addEventListener('input', applyFilters);
+    // Only scroll on Enter key, not on every input
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyFilters(true); // Scroll when Enter is pressed
+        }
+    });
+    searchInput.addEventListener('input', () => {
+        applyFilters(false); // Don't scroll on every keystroke
+    });
 }
 
 if (searchFilter) {
     searchFilter.addEventListener('change', (e) => {
         // prioritize dropdown category when set
-        applyFilters();
+        applyFilters(true); // Scroll when filter changes
     });
 }
 
 if (searchButton) {
     searchButton.addEventListener('click', (e) => {
         e.preventDefault();
-        applyFilters();
+        applyFilters(true); // Pass true to enable scrolling
     });
 }
 
